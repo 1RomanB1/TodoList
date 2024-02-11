@@ -10,26 +10,31 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// Статус состояния модели представления
 sealed class Status {
-    object Ready : Status()
-    object Loading : Status()
-    data class Error(val message: String) : Status()
+    object Ready : Status()  // Данные готовы
+    object Loading : Status()  // Данные загружаются
+    data class Error(val message: String) : Status()  // Произошла ошибка
 }
 
+// Состояние модели представления
 data class State(
-    val data: List<Todo> = listOf(),
-    val status: Status = Status.Ready,
+    val data: List<Todo> = listOf(),  // Список задач
+    val status: Status = Status.Ready,  // Статус
     val nonce: Int = 0, // Костыль, mutableStateFlow не засекает изменения списка
 )
 
+// Модель представления
 class TodoViewModel : ViewModel() {
+    // Состояние модели
     private val _state = MutableStateFlow(State())
     val state = _state.asStateFlow()
 
     init {
-        loadData()
+        loadData()  // Загрузить данные при запуске
     }
 
+    // Загрузка данных с сервера
     fun loadData() {
         _state.update { state -> state.copy(status = Status.Loading) }
 
@@ -54,6 +59,7 @@ class TodoViewModel : ViewModel() {
         }
     }
 
+    // Поставить/убрать галочку у задачи
     fun toggleTodo(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val index = _state.value.data.indexOfFirst { todo -> todo.id == id }
@@ -80,6 +86,7 @@ class TodoViewModel : ViewModel() {
         }
     }
 
+    // Создать новую задачу
     fun newTodo(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val todo = NewTodo(name)
@@ -104,6 +111,7 @@ class TodoViewModel : ViewModel() {
         }
     }
 
+    // Удалить задачу
     fun deleteTodo(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

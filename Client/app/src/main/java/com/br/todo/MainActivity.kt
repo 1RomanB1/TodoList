@@ -76,29 +76,33 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Перечисление экранов приложения
 enum class Screen(val title: String) {
     List("Задачи"),
     Create("Создать задачу"),
 }
 
+// Содержимое приложения
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppContent(
     modifier: Modifier = Modifier,
     viewModel: TodoViewModel = viewModel(),
 ) {
-    val initialRoute = Screen.List.name
-    val navController = rememberNavController()
+    val initialRoute = Screen.List.name  // Начальный экран
+    val navController = rememberNavController()  // Контроллер навигации
 
-    val navControllerState = navController
+    val navControllerState = navController  // Текущее состояние контроллера навигации
         .currentBackStackEntryFlow
         .collectAsState(initial = navController.currentBackStackEntry)
 
+    // Текущий экран
     val currentRoute = navControllerState.value?.destination?.route ?: initialRoute
 
     Scaffold (
         modifier = modifier,
         topBar = {
+            // Шапка
             TopAppBar(
                 colors = TopAppBarDefaults.smallTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -106,6 +110,7 @@ fun AppContent(
                 ),
                 title = { Text(Screen.valueOf(currentRoute).title) },
                 navigationIcon = {
+                    // Кнопка назад, если есть куда возвращаться
                     if (navController.previousBackStackEntry != null) {
                         IconButton(onClick = { navController.navigateUp() }) {
                             Icon(Icons.Default.ArrowBack, "Назад")
@@ -113,6 +118,7 @@ fun AppContent(
                     }
                 },
                 actions = {
+                    // Кнопка обновить, только на главном экране
                     if (currentRoute == initialRoute) {
                         IconButton(onClick = { viewModel.loadData() }) {
                             Icon(Icons.Default.Refresh, "Обновить")
@@ -122,6 +128,7 @@ fun AppContent(
             )
         },
         floatingActionButton = {
+            // Кнопка создать задачу, только на главном экране
             if (currentRoute == initialRoute) {
                 FloatingActionButton(
                     onClick = {
@@ -143,12 +150,15 @@ fun AppContent(
                 .fillMaxSize()
                 .padding(8.dp)
 
+            // Экран списка задач
             composable(Screen.List.name) {
                 TodoList(
                     modifier = innerModifier,
                     viewModel = viewModel,
                 )
             }
+
+            // Экран создания задачи
             composable(Screen.Create.name) {
                 TodoCreate(
                     modifier = innerModifier,
@@ -163,14 +173,15 @@ fun AppContent(
     }
 }
 
+// Список задач
 @Composable
 fun TodoList(
     modifier: Modifier = Modifier,
     viewModel: TodoViewModel = viewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
-    var dialogOpen by remember { mutableStateOf(false) }
-    var idToDelete by remember { mutableIntStateOf(-1) }
+    val state by viewModel.state.collectAsState()  // Текущее состояние модели представления
+    var dialogOpen by remember { mutableStateOf(false) }  // Открыт ли диалог удаления
+    var idToDelete by remember { mutableIntStateOf(-1) }  // Какую задачу удалить
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -178,9 +189,12 @@ fun TodoList(
         Column(
             modifier = modifier,
         ) {
+            // Выбор содержимого в зависимости от статуса
             when (val status = state.status) {
+                // Данные готовы
                 is Status.Ready -> {
                     if (state.data.isEmpty()) {
+                        // Список задач пуст
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
@@ -188,6 +202,7 @@ fun TodoList(
                             Text("Список пуст")
                         }
                     } else {
+                        // Отображение списка задач
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -198,6 +213,7 @@ fun TodoList(
                                         .fillMaxWidth()
                                         .pointerInput(Unit) {
                                             detectTapGestures(
+                                                // Обработка долгого нажатия на карточку
                                                 onLongPress = {
                                                     dialogOpen = true
                                                     idToDelete = item.id
@@ -211,6 +227,7 @@ fun TodoList(
                                             .padding(8.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
+                                        // Текст задачи
                                         Text(
                                             text = item.name,
                                             modifier = Modifier
@@ -219,6 +236,7 @@ fun TodoList(
                                                     align = Alignment.CenterVertically
                                                 )
                                         )
+                                        // Галочка
                                         Checkbox(
                                             checked = item.done,
                                             onCheckedChange = {
@@ -232,6 +250,7 @@ fun TodoList(
                     }
                 }
 
+                // Данные загружаются
                 is Status.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -243,6 +262,7 @@ fun TodoList(
                     }
                 }
 
+                // Произошла ошибка
                 is Status.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -254,6 +274,7 @@ fun TodoList(
             }
         }
 
+        // Диалог удаления задачи
         if (dialogOpen) {
             Box(
                 modifier = Modifier
@@ -264,6 +285,7 @@ fun TodoList(
             AlertDialog(
                 text = { Text("Удалить выбранную задачу?") },
                 confirmButton = {
+                    // Кнопка подтверждения
                     TextButton(onClick = {
                         dialogOpen = false
                         viewModel.deleteTodo(idToDelete)
@@ -272,6 +294,7 @@ fun TodoList(
                         Text("Удалить")
                     }
                 },
+                // Кнопка отмены
                 dismissButton = {
                     TextButton(onClick = {
                         dialogOpen = false
@@ -285,6 +308,7 @@ fun TodoList(
     }
 }
 
+// Создание задачи
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoCreate(
@@ -292,11 +316,13 @@ fun TodoCreate(
     viewModel: TodoViewModel = viewModel(),
     afterCreate: () -> Unit = {}
 ) {
+    // Текущий введённый текст
     var text by remember { mutableStateOf("") }
 
     Column (
         modifier = modifier,
     ) {
+        // Поле ввода текста
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
@@ -306,11 +332,12 @@ fun TodoCreate(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
+            // Кнопка создать
             Button(onClick = {
                 viewModel.newTodo(text)
                 afterCreate()
             }) {
-                Text("Create")
+                Text("Создать")
             }
         }
     }
